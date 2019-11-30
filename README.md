@@ -25,4 +25,4 @@ Custom Solar Array Simulator for Nanosatellites
 ### Who do I talk to? ###
 
 * [Juan J. Rojas](mailto:juan.rojas@itcr.ac.cr)
-* [Emilio](mailto:carlos97emilio18@gmail.com) 
+* [Carlos E. Soto](mailto:carlos97emilio18@gmail.com) 
