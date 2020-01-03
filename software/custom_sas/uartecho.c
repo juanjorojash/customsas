@@ -35,6 +35,7 @@
  */
 #include <stdint.h>
 #include <stddef.h>
+#include <math.h>
 
 /* Driver Header files */
 #include <ti/drivers/GPIO.h>
@@ -82,17 +83,88 @@ void *mainThread(void *arg0)
     }
 
     UART_write(uart, resetMsg, sizeof(resetMsg));
-
+    uint16_t voc = 0;
+    uint16_t vmp = 0;
+    uint16_t imp = 0;
+    uint16_t isc = 0;
+    uint32_t n = 0;
+    uint16_t index = 0;
+    float Voc;
+    float Vmp;
+    float Imp;
+    float Isc;
+    float N;
+    float Rs = 0;
+    float log2  = 0.69314718;
+    float table[1024] = {0};
+    uint16_t j = 0;
+    float vout = 0;
+    uint8_t SOO = 0xFE;
+    uint8_t EOO = 0xFD;
+    float i;
+    float x;
+    float series;
+    float v;
     /* Loop forever echoing */
     while (1) {
-        uint16_t voc = 0;
-        uint16_t vmp = 0;
-        UART_read(uart, &input, 1);
-        if (input == 0xFE)
+        UART_read(uart, &input, sizeof(input));
+        if (input == 0xFD)
         {
             UART_read(uart, &voc, sizeof(voc));
-
+            UART_read(uart, &vmp, sizeof(vmp));
+            UART_read(uart, &imp, sizeof(imp));
+            UART_read(uart, &isc, sizeof(isc));
+            UART_read(uart, &n, sizeof(n));
+            UART_read(uart, &input, sizeof(input));
+            if (input == 0xFE)
+            {
+                UART_write(uart, &voc, sizeof(voc));
+                UART_write(uart, &vmp, sizeof(vmp));
+                UART_write(uart, &imp, sizeof(imp));
+                UART_write(uart, &isc, sizeof(isc));
+                UART_write(uart, &n, sizeof(n));
+                Voc = (float) voc / 10.0;
+                Vmp = (float) vmp / 10.0;
+                Imp = (float) imp / 10.0;
+                Isc = (float) isc / 10.0;
+                N = ((float) n) / 1000.0;
+                Rs  = (Voc - Vmp) / Imp;
+                for (j = 0; j < 1024; j++)
+                {
+                    i = ((float)j * Isc) / 1023.0;
+                    x = pow((i/Isc),N);
+                    series = log2;
+                    series -= (x / 2);
+                    series -= (pow(x,2)/8);
+                    series -= (pow(x,3)/24);
+                    series -= (pow(x,4)/64);
+                    v = (Voc * series) / log2;
+                    v -= Rs * ( i - Isc );
+                    v /= (1 + ( ( Rs * Isc ) / Voc ) );
+                    table[j]  = v;
+                }
+            }
+            UART_write(uart, &EOO, sizeof(EOO));
         }
-        UART_write(uart, &voc, sizeof(voc));
+        if (input == 0xFB)
+        {
+//            UART_read(uart, &index, sizeof(index));
+//            UART_write(uart, &index, sizeof(index));
+//            vout = table[index];
+            UART_read(uart, &input, sizeof(input));
+            if (input == 0xFC)
+            {
+                UART_write(uart, &SOO, sizeof(SOO));
+                for (j = 0; j < 1024; j++)
+                {
+                    vout = table[j];
+                    UART_write(uart, &vout, sizeof(vout));
+                }
+                //UART_write(uart, &vout, sizeof(vout));
+                //UART_write(uart, &EOO, sizeof(EOO));
+            }
+            UART_write(uart, &EOO, sizeof(EOO));
+        }
+
     }
 }
