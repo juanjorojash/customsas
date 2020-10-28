@@ -1,4 +1,4 @@
 .vscode/
-software/simulation/slprj/
+**/slprj
 *.slxc
 *.autosave
